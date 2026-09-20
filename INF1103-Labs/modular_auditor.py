@@ -19,6 +19,10 @@ def process_delivery(current_total, new_value):
     new_total = current_total + new_value
     return new_total
 
+def calculate_tax(amount):
+    tax = amount * 0.10
+    return tax
+
 # main program
 total_units = 0
 
@@ -30,5 +34,8 @@ while True:
 
      total_units = process_delivery(total_units, result)
 
+     tax = calculate_tax(result)
+
      print(result)
      print(total_units)
+     print(tax)
