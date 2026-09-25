@@ -1,0 +1,100 @@
+import os
+
+failed_attempts = 0  # tracked globally so get_valid_input() can update it
+INVENTORY_FILE = "inventory.txt"
+
+
+# function
+def get_valid_input():
+    # returns integer or "quit"
+    global failed_attempts
+
+    while True:
+        userinput = input("Enter stock quantity (or 'quit' to exit): ")
+
+        if userinput.lower() == "quit":
+            return "quit"
+
+        if not userinput.isdigit():
+            print("Invalid input. Please enter a positive whole number.")
+            failed_attempts += 1
+            continue
+
+        quantity = int(userinput)
+
+        return quantity
+
+
+def process_delivery(current_total, new_value):
+    new_total = current_total + new_value
+    return new_total
+
+
+def calculate_tax(amount):
+    tax = amount * 0.10
+    return tax
+
+
+# --- PHASE 2a: load_inventory() only ---------------------------------------
+def load_inventory(filename=INVENTORY_FILE):
+    """
+    Loads the running total and transaction history from the inventory
+    file at the start of the program. If the file doesn't exist yet (or
+    can't be read), starts with an empty inventory (total 0, no history)
+    instead of raising an error.
+    """
+    if not os.path.exists(filename):
+        print("No existing inventory file found. Starting with an empty inventory.\n")
+        return 0, []
+
+    try:
+        with open(filename, "r") as file:
+            lines = file.read().splitlines()
+    except OSError:
+        print(f"Could not read '{filename}'. Starting with an empty inventory.\n")
+        return 0, []
+
+    if not lines:
+        return 0, []
+
+    try:
+        total = int(lines[0])
+        history = [int(line) for line in lines[1:] if line.strip() != ""]
+    except ValueError:
+        print(f"'{filename}' appears corrupted. Starting with an empty inventory.\n")
+        return 0, []
+
+    print(f"Loaded previous inventory: total = {total}, {len(history)} past transaction(s).\n")
+    return total, history
+
+
+def generate_report(total_units, failed_attempts):
+    print("\n--- Final Report ---")
+    print("Total Deliveries Processed:", total_units)
+    print("Number of Failed/Rejected Entries:", failed_attempts)
+
+
+# main program
+# NOTE: at this stage we only care about proving load_inventory() works,
+# so we load the running total but don't wire up history tracking or
+# saving yet - that comes in phases 2b and 2c.
+running_total, _ = load_inventory()
+deliveries_processed = 0
+
+while True:
+    result = get_valid_input()
+
+    if result == "quit":
+        break
+
+    running_total = process_delivery(running_total, result)
+
+    tax = calculate_tax(result)
+
+    deliveries_processed += 1
+
+    print("Delivery:", result)
+    print("Tax (10%):", tax)
+
+generate_report(deliveries_processed, failed_attempts)
+print("Running total (loaded + this session):", running_total)
