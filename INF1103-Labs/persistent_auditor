@@ -35,7 +35,6 @@ def calculate_tax(amount):
     return tax
 
 
-# --- PHASE 2a: load_inventory() only ---------------------------------------
 def load_inventory(filename=INVENTORY_FILE):
     """
     Loads the running total and transaction history from the inventory
@@ -75,10 +74,7 @@ def generate_report(total_units, failed_attempts):
 
 
 # main program
-# NOTE: at this stage we only care about proving load_inventory() works,
-# so we load the running total but don't wire up history tracking or
-# saving yet - that comes in phases 2b and 2c.
-running_total, _ = load_inventory()
+running_total, transaction_history = load_inventory()
 deliveries_processed = 0
 
 while True:
@@ -89,6 +85,8 @@ while True:
 
     running_total = process_delivery(running_total, result)
 
+    transaction_history.append(result)
+
     tax = calculate_tax(result)
 
     deliveries_processed += 1
@@ -97,4 +95,6 @@ while True:
     print("Tax (10%):", tax)
 
 generate_report(deliveries_processed, failed_attempts)
-print("Running total (loaded + this session):", running_total)
+
+print("Transaction history so far:", transaction_history)
+print("Total entries tracked (loaded + this session):", len(transaction_history))
