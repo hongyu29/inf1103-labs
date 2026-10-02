@@ -1,0 +1,81 @@
+import json
+import os
+
+DATA_DIR = os.environ.get("DATA_DIR", ".")
+FILENAME = os.path.join(DATA_DIR, "inventory.json")
+
+
+def load_inventory():
+    if os.path.exists(FILENAME):
+        print("inventory.json found.")
+        try:
+            with open(FILENAME,"r") as f:
+                inventory = json.load(f)
+            print("Inventory loaded successfully.")
+            return inventory
+        except (json.JSONDecodeError, OSError):
+            print("Could not read inventory.json. Starting with an empty inventory.")
+            return []
+    print("inventory.json not found. Starting with an empty inventory.")
+    return []
+
+
+    
+
+
+    return
+
+def add_product():
+    return
+def update_stock():
+    return
+def search_product():
+    return
+def display_all():
+    return
+
+def main():
+
+    print("="*40)
+    print("INVENTORY MANAGEMENT SYSTEM")
+    print("="*40)
+
+    inventory = load_inventory()
+
+    print("\n----------- MENU -----------")
+    print("1. Display All Products")
+    print("2. Add Product")
+    print("3. Update Stock")
+    print("4. Search Product")
+    print("5. Save Inventory")
+    print("6. Exit")
+    print("----------------------------")
+
+    while True:
+        choice = input("\nEnter option: ").strip()
+    
+        if choice == "1":
+            display_all()
+        elif choice == "2":
+            add_product()
+        elif choice == "3":
+            update_stock()
+        elif choice == "4":
+            search_product()
+        elif choice == "5":
+            print("Saving inventory...")
+            
+        elif choice == "6":
+            print("Saving inventory before exit...")
+            
+            print("Thank you for using Inventory Management System.")
+            print("Program terminated.")
+            break
+        else:
+            print("Invalid option. Please enter a number from 1 to 6.")
+
+    return
+
+if __name__ == "__main__":
+    main()
+
