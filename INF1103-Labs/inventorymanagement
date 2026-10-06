@@ -20,10 +20,6 @@ def load_inventory():
     return []
 
 
-    
-
-
-    return
 
 def add_product():
     return
@@ -31,8 +27,16 @@ def update_stock():
     return
 def search_product():
     return
-def display_all():
-    return
+
+def display_all(inventory):
+    print("\nCurrent Inventory")
+    print("-" * 48)
+    if not inventory:
+        print("No products in inventory.")
+    for p in inventory:
+        print(f"ID: {p['id']} | Name: {p['name']} | "
+              f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
+    print("-" * 48)
 
 def main():
 
@@ -55,7 +59,7 @@ def main():
         choice = input("\nEnter option: ").strip()
     
         if choice == "1":
-            display_all()
+            display_all(inventory)
         elif choice == "2":
             add_product()
         elif choice == "3":
