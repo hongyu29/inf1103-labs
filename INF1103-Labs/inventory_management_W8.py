@@ -1,14 +1,18 @@
+import json
+import os
 
+DATA_DIR = os.environ.get("DATA_DIR", ".")
+FILENAME = os.path.join(DATA_DIR, "inventory.json")
 
 class Product:
     def __init__(self,productid,name,price,stock):
-        self.__productid = productid
+        self.__product_id = productid
         self.__name = name
         self.__price = price
         self.__stock = stock
 
     def get_id(self):
-        return self.__productid
+        return self.__product_id
 
     def get_name(self):
         return self.__name
@@ -26,6 +30,17 @@ class Product:
         print(f"ID: {self.__product_id} | Name: {self.__name} | "
             f"Price: ${self.__price:.2f} | Stock: {self.__stock}")
 
+    def to_dict(self):
+        return {
+            "id": self.__product_id,
+            "name": self.__name,
+            "price": self.__price,
+            "stock": self.__stock,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["id"], data["name"], data["price"], data["stock"])
 
 class Inventory:
 
@@ -55,7 +70,38 @@ class Inventory:
             product.display_information()
         print("-" * 48)
 
+    def to_list(self):
+        """Plain-data form of the inventory, used for saving."""
+        return [product.to_dict() for product in self.__products]
+
+# ---------- File handling ----------
+
+def load_inventory():
+    inventory = Inventory()
+    if not os.path.exists(FILENAME):
+        print("inventory.json not found. Starting with an empty inventory.")
+        return inventory
+ 
+    print("inventory.json found.")
+    try:
+        with open(FILENAME, "r") as f:
+            data = json.load(f)
+        for item in data:
+            inventory.add_product(Product.from_dict(item))
+        print("Inventory loaded successfully.")
+    except (json.JSONDecodeError, OSError, KeyError, TypeError, ValueError):
+        print("Could not read inventory.json. Starting with an empty inventory.")
+        return Inventory()
+    return inventory
+ 
+ 
+def save_inventory(inventory):
+    with open(FILENAME, "w") as f:
+        json.dump(inventory.to_list(), f, indent=4)
+    print("Inventory saved successfully to inventory.json.")
+
 # ---------- Menu actions (user input lives here) ----------
+
 def add_product(inventory):
     print("\nAdd New Product")
     product_id = input("Product ID: ").strip()
