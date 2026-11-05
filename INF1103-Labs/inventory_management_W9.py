@@ -1,10 +1,11 @@
 import json
 import os
+from abc import ABC, abstractmethod
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 FILENAME = os.path.join(DATA_DIR, "inventory.json")
 
-class Product:
+class Product(ABC):
     def __init__(self,productid,name,price,stock):
         self.__product_id = productid
         self.__name = name
@@ -37,6 +38,11 @@ class Product:
             "price": self.__price,
             "stock": self.__stock,
         }
+    
+    @abstractmethod
+    def get_fulfilment_info(self):
+        """Describe how this product is fulfilled (subclasses must implement)."""
+        pass
 
     @classmethod
     def from_dict(cls, data):
@@ -87,6 +93,20 @@ class PhysicalProduct(Product):
         super().display_information()
         print(f"   Weight: {self.__weight} kg")
 
+    def get_fulfilment_info(self):
+        return "This product requires physical shipping."
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "physical"
+        data["weight"] = self.__weight
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["id"], data["name"], data["price"], data["stock"],
+                   data["weight"])
+
 class DigitalProduct(Product):
 
     def __init__(self,productid,name,price,stock,download_size):
@@ -99,7 +119,29 @@ class DigitalProduct(Product):
     def display_information(self):
         super().display_information()
         print(f"  Download Size: {self.__download_size} MB")
+        
 
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "digital"
+        data["download_size"] = self.__download_size
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["id"], data["name"], data["price"], data["stock"],
+                   data["download_size"])
+
+# Maps the saved "type" identifier to the class that rebuilds it.
+PRODUCT_TYPES = {
+    "physical": PhysicalProduct,
+    "digital": DigitalProduct,
+}
+
+
+def product_from_dict(data):
+    """Create the right Product subclass from saved data."""
+    return PRODUCT_TYPES[data["type"]].from_dict(data)
 
 # ---------- File handling ----------
 
