@@ -1,0 +1,165 @@
+import json
+import os
+
+# DATA_DIR lets Docker mount a volume (e.g. /data). Defaults to current folder.
+DATA_DIR = os.environ.get("DATA_DIR", ".")
+FILENAME = os.path.join(DATA_DIR, "inventory.json")
+
+
+# ---------- Persistence ----------
+def load_inventory():
+    """Load inventory.json if it exists, otherwise start empty."""
+    if os.path.exists(FILENAME):
+        print("inventory.json found.")
+        try:
+            with open(FILENAME, "r") as f:
+                inventory = json.load(f)
+            print("Inventory loaded successfully.")
+            return inventory
+        except (json.JSONDecodeError, OSError):
+            print("Could not read inventory.json. Starting with an empty inventory.")
+            return []
+    print("inventory.json not found. Starting with an empty inventory.")
+    return []
+
+
+def save_inventory(inventory):
+    """Write the inventory list to inventory.json."""
+    with open(FILENAME, "w") as f:
+        json.dump(inventory, f, indent=4)
+    print(f"Inventory saved successfully to inventory.json.")
+
+
+# ---------- Helpers ----------
+def find_product(inventory, product_id):
+    """Return the product dict with the given ID, or None."""
+    for product in inventory:
+        if product["id"].lower() == product_id.lower():
+            return product
+    return None
+
+
+# ---------- Data manipulation ----------
+def display_all(inventory):
+    print("\nCurrent Inventory")
+    print("-" * 48)
+    if not inventory:
+        print("No products in inventory.")
+    for p in inventory:
+        print(f"ID: {p['id']} | Name: {p['name']} | "
+              f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
+    print("-" * 48)
+
+
+def add_product(inventory):
+    print("\nAdd New Product")
+    product_id = input("Product ID: ").strip()
+    if not product_id:
+        print("Product ID cannot be empty.")
+        return
+    if find_product(inventory, product_id):
+        print("A product with that ID already exists.")
+        return
+
+    name = input("Product Name: ").strip()
+    try:
+        price = float(input("Price: "))
+        stock = int(input("Stock Quantity: "))
+    except ValueError:
+        print("Invalid input. Price must be a number and stock a whole number.")
+        return
+    if price < 0 or stock < 0:
+        print("Price and stock cannot be negative.")
+        return
+
+    inventory.append({"id": product_id, "name": name, "price": price, "stock": stock})
+    print("Product added successfully!")
+
+
+def update_stock(inventory):
+    print("\nUpdate Stock")
+    product_id = input("Enter Product ID: ").strip()
+    product = find_product(inventory, product_id)
+    if product is None:
+        print("Product not found.")
+        return
+
+    print("Product Found:")
+    print(f"Name: {product['name']}")
+    print(f"Current Stock: {product['stock']}")
+    try:
+        new_stock = int(input("New Stock Quantity: "))
+    except ValueError:
+        print("Invalid input. Stock must be a whole number.")
+        return
+    if new_stock < 0:
+        print("Stock cannot be negative.")
+        return
+
+    product["stock"] = new_stock
+    print("Stock updated successfully!")
+
+
+def search_product(inventory):
+    print("\nSearch Product")
+    product_id = input("Enter Product ID: ").strip()
+    product = find_product(inventory, product_id)
+    if product is None:
+        print("Product not found.")
+        return
+
+    print("Product Found")
+    print("-" * 48)
+    print(f"ID: {product['id']}")
+    print(f"Name: {product['name']}")
+    print(f"Price: ${product['price']:.2f}")
+    print(f"Stock: {product['stock']}")
+    print("-" * 48)
+
+
+# ---------- Menu ----------
+def show_menu():
+    print("\n----------- MENU -----------")
+    print("1. Display All Products")
+    print("2. Add Product")
+    print("3. Update Stock")
+    print("4. Search Product")
+    print("5. Save Inventory")
+    print("6. Exit")
+    print("----------------------------")
+
+
+def main():
+    print("=" * 40)
+    print("INVENTORY MANAGEMENT SYSTEM")
+    print("=" * 40)
+
+    inventory = load_inventory()
+    show_menu()
+
+    while True:
+        choice = input("\nEnter option: ").strip()
+
+        if choice == "1":
+            display_all(inventory)
+        elif choice == "2":
+            add_product(inventory)
+        elif choice == "3":
+            update_stock(inventory)
+        elif choice == "4":
+            search_product(inventory)
+        elif choice == "5":
+            print("Saving inventory...")
+            save_inventory(inventory)
+        elif choice == "6":
+            print("Saving inventory before exit...")
+            save_inventory(inventory)
+            print("Thank you for using Inventory Management System.")
+            print("Program terminated.")
+            break
+        else:
+            print("Invalid option. Please enter a number from 1 to 6.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,5 @@
 failed_attempts = 0  # tracked globally so get_valid_input() can update it
  
- 
 # function
 def get_valid_input():
     # returns integer or "quit"

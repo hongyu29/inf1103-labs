@@ -19,7 +19,6 @@ while True:
         failed_entry += 1
         continue
 
-       
     inventory += quantity
 
     if inventory > 500:

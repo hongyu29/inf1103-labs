@@ -1,4 +1,4 @@
 FROM python:3.11-slim
 WORKDIR /app
-COPY auditor.py .
-CMD ["python", "auditor.py"]
+COPY inventory_management_W8.py .
+CMD ["python", "inventory_management_W8.py"]
