@@ -87,6 +87,19 @@ class PhysicalProduct(Product):
         super().display_information()
         print(f"   Weight: {self.__weight} kg")
 
+class DigitalProduct(Product):
+
+    def __init__(self,productid,name,price,stock,download_size):
+        super().__init__(productid,name,price,stock)
+        self.__download_size = download_size
+
+    def get_download_size(self):
+        return self.__download_size
+
+    def display_information(self):
+        super().display_information()
+        print(f"  Download Size: {self.__download_size} MB")
+
 
 # ---------- File handling ----------
 
@@ -118,6 +131,14 @@ def save_inventory(inventory):
 
 def add_product(inventory):
     print("\nAdd New Product")
+    print("Product type:")
+    print("1. Physical")
+    print("2. Digital")
+    type_choice = input("Choose type (1/2): ").strip()
+    if type_choice not in ("1", "2"):
+        print("Invalid product type.")
+        return
+ 
     product_id = input("Product ID: ").strip()
     if not product_id:
         print("Product ID cannot be empty.")
@@ -131,15 +152,18 @@ def add_product(inventory):
     try:
         price = float(input("Price: "))
         stock = int(input("Stock Quantity: "))
-        weight = int(input("Weight: "))
-        product = PhysicalProduct(product_id, name, price, stock, weight)
+        if type_choice == "1":
+            weight = float(input("Weight (kg): "))
+            product = PhysicalProduct(product_id, name, price, stock, weight)
+        else:
+            size = float(input("Download size (MB): "))
+            product = DigitalProduct(product_id, name, price, stock, size)
     except ValueError as e:
         print(f"Invalid input: {e}")
         return
- 
+
     inventory.add_product(product)
     print("Product added successfully!")
- 
  
 def update_stock(inventory):
     print("\nUpdate Stock")
