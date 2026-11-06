@@ -5,6 +5,17 @@ from abc import ABC, abstractmethod
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 FILENAME = os.path.join(DATA_DIR, "inventory.json")
 
+# ---------- Interface ----------
+ 
+class CanBeShipped(ABC):
+    """Interface-style contract: anything that can be shipped must be able
+    to calculate its shipping cost."""
+ 
+    @abstractmethod
+    def calculate_shipping_cost(self):
+        """Return the shipping cost for this object."""
+        pass
+
 class Product(ABC):
     def __init__(self,productid,name,price,stock):
         self.__product_id = productid
@@ -80,7 +91,11 @@ class Inventory:
         """Plain-data form of the inventory, used for saving."""
         return [product.to_dict() for product in self.__products]
 
-class PhysicalProduct(Product):
+class PhysicalProduct(Product, CanBeShipped):
+
+    # Single class inheritance (Product) plus one interface (CanBeShipped).
+    BASE_SHIPPING = 5.00
+    RATE_PER_KG = 2.50
 
     def __init__(self,productid,name,price,stock,weight):
         super().__init__(productid,name,price,stock)
@@ -95,6 +110,10 @@ class PhysicalProduct(Product):
 
     def get_fulfilment_info(self):
         return "This product requires physical shipping."
+
+    def calculate_shipping_cost(self):
+        """Flat base fee plus a per-kg rate."""
+        return self.BASE_SHIPPING + self.RATE_PER_KG * self.__weight
 
     def to_dict(self):
         data = super().to_dict()
@@ -119,7 +138,9 @@ class DigitalProduct(Product):
     def display_information(self):
         super().display_information()
         print(f"  Download Size: {self.__download_size} MB")
-        
+
+    def get_fulfilment_info(self):
+        return "This product is delivered digitally via download."
 
     def to_dict(self):
         data = super().to_dict()
@@ -156,7 +177,7 @@ def load_inventory():
         with open(FILENAME, "r") as f:
             data = json.load(f)
         for item in data:
-            inventory.add_product(Product.from_dict(item))
+            inventory.add_product(product_from_dict(item))
         print("Inventory loaded successfully.")
     except (json.JSONDecodeError, OSError, KeyError, TypeError, ValueError):
         print("Could not read inventory.json. Starting with an empty inventory.")
@@ -238,8 +259,12 @@ def search_product(inventory):
     print("Product Found")
     print("-" * 48)
     product.display_information()
+    print(f"    Fulfilment: {product.get_fulfilment_info()}")
     print("-" * 48)
-
+    if isinstance(product, CanBeShipped):
+        print(f"    Shipping cost: ${product.calculate_shipping_cost():.2f}")
+    print("-" * 48)
+ 
 def main():
     print("=" * 40)
     print("INVENTORY MANAGEMENT SYSTEM")
