@@ -6,8 +6,7 @@ DATA_DIR = os.environ.get("DATA_DIR", ".")
 FILENAME = os.path.join(DATA_DIR, "inventory.json")
 
 # ---------- Interface ----------
-
-
+ 
 class CanBeShipped(ABC):
     """Interface-style contract: anything that can be shipped must be able
     to calculate its shipping cost."""
@@ -17,13 +16,50 @@ class CanBeShipped(ABC):
         """Return the shipping cost for this object."""
         pass
 
+# ---------- Supplier (association with Product) ----------
+
+class Supplier:
+    """Who supplies a product. Created independently of any Product."""
+
+    def __init__(self, supplier_id: str, name: str, contact_email: str):
+        self.__supplier_id: str = supplier_id
+        self.__name: str = name
+        self.__contact_email: str = contact_email
+
+    def get_id(self) -> str:
+        return self.__supplier_id
+
+    def get_name(self) -> str:
+        return self.__name
+
+    def get_contact_email(self) -> str:
+        return self.__contact_email
+
+    def display_information(self) -> None:
+        print(f"Supplier ID: {self.__supplier_id} | Name: {self.__name} | "
+              f"Email: {self.__contact_email}")
+
+    def to_dict(self) -> dict:
+        return {
+            "supplier_id": self.__supplier_id,
+            "name": self.__name,
+            "contact_email": self.__contact_email,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Supplier":
+        return cls(data["supplier_id"], data["name"], data["contact_email"])
+
+
 class Product(ABC):
-    def __init__(self,productid,name,price,stock,supplier: Supplier):
+    def __init__(self, productid: str, name: str, price: float, stock: int,
+                 supplier: Supplier):
         self.__product_id = productid
         self.__name = name
         self.__price = price
         self.__stock = stock
-        self.__supplier : Supplier = supplier
+        # Association: Product only holds a reference; it does not own the Supplier.
+        self.__supplier: Supplier = supplier
 
     def get_id(self):
         return self.__product_id
@@ -57,7 +93,7 @@ class Product(ABC):
             "stock": self.__stock,
             "supplier": self.__supplier.to_dict(),
         }
-    
+   
     @abstractmethod
     def get_fulfilment_info(self):
         """Describe how this product is fulfilled (subclasses must implement)."""
@@ -65,7 +101,8 @@ class Product(ABC):
 
     @classmethod
     def from_dict(cls, data, supplier: Supplier):
-        return cls(data["id"], data["name"], data["price"], data["stock"], supplier)
+        return cls(data["id"], data["name"], data["price"], data["stock"],
+                   supplier)
 
 class Inventory:
 
@@ -105,8 +142,9 @@ class PhysicalProduct(Product, CanBeShipped):
     BASE_SHIPPING = 5.00
     RATE_PER_KG = 2.50
 
-    def __init__(self,productid,name,price,stock,weight):
-        super().__init__(productid,name,price,stock)
+    def __init__(self, productid: str, name: str, price: float, stock: int,
+                 supplier: Supplier, weight: float):
+        super().__init__(productid, name, price, stock, supplier)
         self.__weight = weight
 
     def get_weight(self):
@@ -130,14 +168,15 @@ class PhysicalProduct(Product, CanBeShipped):
         return data
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data, supplier: Supplier):
         return cls(data["id"], data["name"], data["price"], data["stock"],
-                   data["weight"])
+                   supplier, data["weight"])
 
 class DigitalProduct(Product):
 
-    def __init__(self,productid,name,price,stock,download_size):
-        super().__init__(productid,name,price,stock)
+    def __init__(self, productid: str, name: str, price: float, stock: int,
+                 supplier: Supplier, download_size: float):
+        super().__init__(productid, name, price, stock, supplier)
         self.__download_size = download_size
 
     def get_download_size(self):
@@ -146,7 +185,6 @@ class DigitalProduct(Product):
     def display_information(self):
         super().display_information()
         print(f"  Download Size: {self.__download_size} MB")
-
     def get_fulfilment_info(self):
         return "This product is delivered digitally via download."
 
@@ -157,42 +195,9 @@ class DigitalProduct(Product):
         return data
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data, supplier: Supplier):
         return cls(data["id"], data["name"], data["price"], data["stock"],
-                   data["download_size"])
-
-
-class Supplier:
-    """Who supplies a product. Created independently of any Product."""
- 
-    def __init__(self, supplier_id: str, name: str, contact_email: str):
-        self.__supplier_id: str = supplier_id
-        self.__name: str = name
-        self.__contact_email: str = contact_email
- 
-    def get_id(self) -> str:
-        return self.__supplier_id
- 
-    def get_name(self) -> str:
-        return self.__name
- 
-    def get_contact_email(self) -> str:
-        return self.__contact_email
- 
-    def display_information(self) -> None:
-        print(f"Supplier ID: {self.__supplier_id} | Name: {self.__name} | "
-              f"Email: {self.__contact_email}")
- 
-    def to_dict(self) -> dict:
-        return {
-            "supplier_id": self.__supplier_id,
-            "name": self.__name,
-            "contact_email": self.__contact_email,
-        }
- 
-    @classmethod
-    def from_dict(cls, data: dict) -> "Supplier":
-        return cls(data["supplier_id"], data["name"], data["contact_email"])
+                   supplier, data["download_size"])
 
 # Maps the saved "type" identifier to the class that rebuilds it.
 PRODUCT_TYPES = {
@@ -201,9 +206,16 @@ PRODUCT_TYPES = {
 }
 
 
-def product_from_dict(data):
-    """Create the right Product subclass from saved data."""
-    return PRODUCT_TYPES[data["type"]].from_dict(data)
+def product_from_dict(data, suppliers: dict):
+    """Create the right Product subclass from saved data.
+
+    `suppliers` caches Supplier objects by ID so products saved with the same
+    supplier share one Supplier object after loading."""
+    supplier_data = data["supplier"]
+    supplier_id = supplier_data["supplier_id"]
+    if supplier_id not in suppliers:
+        suppliers[supplier_id] = Supplier.from_dict(supplier_data)
+    return PRODUCT_TYPES[data["type"]].from_dict(data, suppliers[supplier_id])
 
 # ---------- File handling ----------
 
@@ -217,8 +229,9 @@ def load_inventory():
     try:
         with open(FILENAME, "r") as f:
             data = json.load(f)
+        suppliers = {}
         for item in data:
-            inventory.add_product(product_from_dict(item))
+            inventory.add_product(product_from_dict(item, suppliers))
         print("Inventory loaded successfully.")
     except (json.JSONDecodeError, OSError, KeyError, TypeError, ValueError):
         print("Could not read inventory.json. Starting with an empty inventory.")
@@ -253,19 +266,29 @@ def add_product(inventory):
         return
  
     name = input("Product Name: ").strip()
+
+    print("Supplier details:")
+    supplier_id = input("Supplier ID: ").strip()
+    supplier_name = input("Supplier Name: ").strip()
+    supplier_email = input("Supplier Contact Email: ").strip()
+    if not (supplier_id and supplier_name and supplier_email):
+        print("All supplier details are required.")
+        return
+    # The Supplier is created independently, then handed to the Product.
+    supplier = Supplier(supplier_id, supplier_name, supplier_email)
+
     try:
         price = float(input("Price: "))
         stock = int(input("Stock Quantity: "))
         if type_choice == "1":
             weight = float(input("Weight (kg): "))
-            product = PhysicalProduct(product_id, name, price, stock, weight)
+            product = PhysicalProduct(product_id, name, price, stock, supplier, weight)
         else:
             size = float(input("Download size (MB): "))
-            product = DigitalProduct(product_id, name, price, stock, size)
+            product = DigitalProduct(product_id, name, price, stock, supplier, size)
     except ValueError as e:
         print(f"Invalid input: {e}")
         return
-
     inventory.add_product(product)
     print("Product added successfully!")
  
@@ -347,6 +370,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-    
