@@ -106,17 +106,31 @@ class Product(ABC):
 
 class Inventory:
 
+    # Aggregation: the Inventory groups existing Product objects but does not
+    # create them or control their lifecycle. It stores the base type Product,
+    # so it can hold PhysicalProduct and DigitalProduct alike.
     def __init__(self):
-        self.__products = []
+        self.__products: list[Product] = []
 
-    def add_product(self, product):
-        """Add a product. Returns False if the ID already exists."""
-        if self.search_product(product.get_id()) is not None:
+    def add_product(self, product: Product) -> bool:
+        """Add an existing Product. Returns False if the ID already exists."""
+        if self.find_product(product.get_id()) is not None:
             return False
         self.__products.append(product)
         return True
- 
-    def search_product(self, product_id):
+
+    def remove_product(self, product_id: str) -> Product | None:
+        """Remove the matching Product reference from this inventory.
+
+        The Product itself is not destroyed: it is returned so the caller can
+        keep using it or add it to another Inventory. Returns None if there
+        is no match."""
+        product = self.find_product(product_id)
+        if product is not None:
+            self.__products.remove(product)
+        return product
+
+    def find_product(self, product_id: str) -> Product | None:
         """Return the Product with the given ID (case-insensitive), or None."""
         for product in self.__products:
             if product.get_id().lower() == product_id.lower():
@@ -261,7 +275,7 @@ def add_product(inventory):
         print("Product ID cannot be empty.")
         return
  
-    if inventory.search_product(product_id):
+    if inventory.find_product(product_id):
         print("A product with that ID already exists.")
         return
  
@@ -295,7 +309,7 @@ def add_product(inventory):
 def update_stock(inventory):
     print("\nUpdate Stock")
     product_id = input("Enter Product ID: ").strip()
-    product = inventory.search_product(product_id)
+    product = inventory.find_product(product_id)
     if product is None:
         print("Product not found.")
         return
@@ -312,10 +326,19 @@ def update_stock(inventory):
     print("Stock updated successfully!")
  
  
+def remove_product(inventory):
+    print("\nRemove Product")
+    product_id = input("Enter Product ID: ").strip()
+    product = inventory.remove_product(product_id)
+    if product is None:
+        print("Product not found.")
+        return
+    print(f"Removed '{product.get_name()}' from the inventory.")
+
 def search_product(inventory):
     print("\nSearch Product")
     product_id = input("Enter Product ID: ").strip()
-    product = inventory.search_product(product_id)
+    product = inventory.find_product(product_id)
     if product is None:
         print("Product not found.")
         return
@@ -341,8 +364,9 @@ def main():
     print("2. Add Product")
     print("3. Update Stock")
     print("4. Search Product")
-    print("5. Save Inventory")
-    print("6. Exit")
+    print("5. Remove Product")
+    print("6. Save Inventory")
+    print("7. Exit")
     print("----------------------------")
  
     while True:
@@ -357,16 +381,18 @@ def main():
         elif choice == "4":
             search_product(inventory)
         elif choice == "5":
+            remove_product(inventory)
+        elif choice == "6":
             print("Saving inventory...")
             save_inventory(inventory)
-        elif choice == "6":
+        elif choice == "7":
             print("Saving inventory before exit...")
             save_inventory(inventory)
             print("Thank you for using Inventory Management System.")
             print("Program terminated.")
             break
         else:
-            print("Invalid option. Please enter a number from 1 to 6.")
+            print("Invalid option. Please enter a number from 1 to 7.")
 
 if __name__ == "__main__":
     main()
