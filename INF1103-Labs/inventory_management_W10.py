@@ -12,7 +12,7 @@ class CanBeShipped(ABC):
     to calculate its shipping cost."""
  
     @abstractmethod
-    def calculate_shipping_cost(self):
+    def calculate_shipping_cost(self) -> float:
         """Return the shipping cost for this object."""
         pass
 
@@ -52,40 +52,40 @@ class Supplier:
 
 
 class Product(ABC):
-    def __init__(self, productid: str, name: str, price: float, stock: int,
+    def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier):
-        self.__product_id = productid
-        self.__name = name
-        self.__price = price
-        self.__stock = stock
+        self.__product_id: str = product_id
+        self.__name: str = name
+        self.__price: float = price
+        self.__stock: int = stock
         # Association: Product only holds a reference; it does not own the Supplier.
         self.__supplier: Supplier = supplier
 
-    def get_id(self):
+    def get_id(self) -> str:
         return self.__product_id
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.__name
 
-    def get_price(self):
+    def get_price(self) -> float:
         return self.__price
 
-    def get_stock(self):
+    def get_stock(self) -> int:
         return self.__stock
 
     def get_supplier(self) -> Supplier:
         return self.__supplier
 
-    def update_stock(self,quantity):
+    def update_stock(self, quantity: int) -> None:
         self.__stock = quantity
 
-    def display_information(self):
+    def display_information(self) -> None:
         print(f"ID: {self.__product_id} | Name: {self.__name} | "
             f"Price: ${self.__price:.2f} | Stock: {self.__stock}")
         print("   ", end="")
         self.__supplier.display_information()
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             "id": self.__product_id,
             "name": self.__name,
@@ -95,12 +95,12 @@ class Product(ABC):
         }
    
     @abstractmethod
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         """Describe how this product is fulfilled (subclasses must implement)."""
         pass
 
     @classmethod
-    def from_dict(cls, data, supplier: Supplier):
+    def from_dict(cls, data: dict, supplier: Supplier) -> "Product":
         return cls(data["id"], data["name"], data["price"], data["stock"],
                    supplier)
 
@@ -109,7 +109,7 @@ class Inventory:
     # Aggregation: the Inventory groups existing Product objects but does not
     # create them or control their lifecycle. It stores the base type Product,
     # so it can hold PhysicalProduct and DigitalProduct alike.
-    def __init__(self):
+    def __init__(self) -> None:
         self.__products: list[Product] = []
 
     def add_product(self, product: Product) -> bool:
@@ -137,7 +137,7 @@ class Inventory:
                 return product
         return None
 
-    def display_all(self):
+    def display_all(self) -> None:
         print("\nCurrent Inventory")
         print("-" * 48)
         if not self.__products:
@@ -146,7 +146,7 @@ class Inventory:
             product.display_information()
         print("-" * 48)
 
-    def to_list(self):
+    def to_list(self) -> list[dict]:
         """Plain-data form of the inventory, used for saving."""
         return [product.to_dict() for product in self.__products]
 
@@ -156,71 +156,136 @@ class PhysicalProduct(Product, CanBeShipped):
     BASE_SHIPPING = 5.00
     RATE_PER_KG = 2.50
 
-    def __init__(self, productid: str, name: str, price: float, stock: int,
+    def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier, weight: float):
-        super().__init__(productid, name, price, stock, supplier)
-        self.__weight = weight
+        super().__init__(product_id, name, price, stock, supplier)
+        self.__weight: float = weight
 
-    def get_weight(self):
+    def get_weight(self) -> float:
         return self.__weight
 
-    def display_information(self):
+    def display_information(self) -> None:
         super().display_information()
         print(f"   Weight: {self.__weight} kg")
 
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         return "This product requires physical shipping."
 
-    def calculate_shipping_cost(self):
+    def calculate_shipping_cost(self) -> float:
         """Flat base fee plus a per-kg rate."""
         return self.BASE_SHIPPING + self.RATE_PER_KG * self.__weight
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         data = super().to_dict()
         data["type"] = "physical"
         data["weight"] = self.__weight
         return data
 
     @classmethod
-    def from_dict(cls, data, supplier: Supplier):
+    def from_dict(cls, data: dict, supplier: Supplier) -> "PhysicalProduct":
         return cls(data["id"], data["name"], data["price"], data["stock"],
                    supplier, data["weight"])
 
 class DigitalProduct(Product):
 
-    def __init__(self, productid: str, name: str, price: float, stock: int,
+    def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier, download_size: float):
-        super().__init__(productid, name, price, stock, supplier)
-        self.__download_size = download_size
+        super().__init__(product_id, name, price, stock, supplier)
+        self.__download_size: float = download_size
 
-    def get_download_size(self):
+    def get_download_size(self) -> float:
         return self.__download_size
 
-    def display_information(self):
+    def display_information(self) -> None:
         super().display_information()
         print(f"  Download Size: {self.__download_size} MB")
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         return "This product is delivered digitally via download."
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         data = super().to_dict()
         data["type"] = "digital"
         data["download_size"] = self.__download_size
         return data
 
     @classmethod
-    def from_dict(cls, data, supplier: Supplier):
+    def from_dict(cls, data: dict, supplier: Supplier) -> "DigitalProduct":
         return cls(data["id"], data["name"], data["price"], data["stock"],
                    supplier, data["download_size"])
 
+# ---------- Orders (composition: Order owns its OrderLines) ----------
+
+class OrderLine:
+    """One product and quantity inside a single Order.
+
+    Not meant to be created outside Order: Order.add_order_line() builds it.
+    It refers to a Product (association) but does not own that Product."""
+
+    def __init__(self, product: Product, quantity: int):
+        self.__product: Product = product
+        self.__quantity: int = quantity
+
+    def get_product(self) -> Product:
+        return self.__product
+
+    def get_quantity(self) -> int:
+        return self.__quantity
+
+    def calculate_subtotal(self) -> float:
+        return self.__product.get_price() * self.__quantity
+
+    def display_information(self) -> None:
+        print(f"   {self.__product.get_name()} | "
+              f"${self.__product.get_price():.2f} x {self.__quantity} | "
+              f"Subtotal: ${self.calculate_subtotal():.2f}")
+
+
+class Order:
+    """Creates and manages its own OrderLine objects (composition)."""
+
+    def __init__(self, order_id: str):
+        self.__order_id: str = order_id
+        self.__order_lines: list[OrderLine] = []
+
+    def get_id(self) -> str:
+        return self.__order_id
+
+    def get_order_lines(self) -> list[OrderLine]:
+        """A copy of the list, so callers cannot add or remove lines directly."""
+        return list(self.__order_lines)
+
+    def add_order_line(self, product: Product, quantity: int) -> None:
+        """The Order creates the OrderLine itself; none is passed in."""
+        order_line = OrderLine(product, quantity)
+        self.__order_lines.append(order_line)
+
+    def remove_order_line(self, product_id: str) -> bool:
+        """Remove (and so discard) the line for the given product ID."""
+        for line in self.__order_lines:
+            if line.get_product().get_id().lower() == product_id.lower():
+                self.__order_lines.remove(line)
+                return True
+        return False
+
+    def calculate_total(self) -> float:
+        return sum(line.calculate_subtotal() for line in self.__order_lines)
+
+    def display_information(self) -> None:
+        print(f"Order {self.__order_id}")
+        if not self.__order_lines:
+            print("   No order lines.")
+        for line in self.__order_lines:
+            line.display_information()
+        print(f"   Total: ${self.calculate_total():.2f}")
+
 # Maps the saved "type" identifier to the class that rebuilds it.
-PRODUCT_TYPES = {
+PRODUCT_TYPES: dict[str, type[Product]] = {
     "physical": PhysicalProduct,
     "digital": DigitalProduct,
 }
 
 
-def product_from_dict(data, suppliers: dict):
+def product_from_dict(data: dict, suppliers: dict[str, Supplier]) -> Product:
     """Create the right Product subclass from saved data.
 
     `suppliers` caches Supplier objects by ID so products saved with the same
@@ -233,7 +298,7 @@ def product_from_dict(data, suppliers: dict):
 
 # ---------- File handling ----------
 
-def load_inventory():
+def load_inventory() -> Inventory:
     inventory = Inventory()
     if not os.path.exists(FILENAME):
         print("inventory.json not found. Starting with an empty inventory.")
@@ -243,7 +308,7 @@ def load_inventory():
     try:
         with open(FILENAME, "r") as f:
             data = json.load(f)
-        suppliers = {}
+        suppliers: dict[str, Supplier] = {}
         for item in data:
             inventory.add_product(product_from_dict(item, suppliers))
         print("Inventory loaded successfully.")
@@ -253,14 +318,14 @@ def load_inventory():
     return inventory
  
  
-def save_inventory(inventory):
+def save_inventory(inventory: Inventory) -> None:
     with open(FILENAME, "w") as f:
         json.dump(inventory.to_list(), f, indent=4)
     print("Inventory saved successfully to inventory.json.")
 
 # ---------- Menu actions (user input lives here) ----------
 
-def add_product(inventory):
+def add_product(inventory: Inventory) -> None:
     print("\nAdd New Product")
     print("Product type:")
     print("1. Physical")
@@ -291,6 +356,7 @@ def add_product(inventory):
     # The Supplier is created independently, then handed to the Product.
     supplier = Supplier(supplier_id, supplier_name, supplier_email)
 
+    product: Product
     try:
         price = float(input("Price: "))
         stock = int(input("Stock Quantity: "))
@@ -306,7 +372,7 @@ def add_product(inventory):
     inventory.add_product(product)
     print("Product added successfully!")
  
-def update_stock(inventory):
+def update_stock(inventory: Inventory) -> None:
     print("\nUpdate Stock")
     product_id = input("Enter Product ID: ").strip()
     product = inventory.find_product(product_id)
@@ -326,7 +392,7 @@ def update_stock(inventory):
     print("Stock updated successfully!")
  
  
-def remove_product(inventory):
+def remove_product(inventory: Inventory) -> None:
     print("\nRemove Product")
     product_id = input("Enter Product ID: ").strip()
     product = inventory.remove_product(product_id)
@@ -335,7 +401,7 @@ def remove_product(inventory):
         return
     print(f"Removed '{product.get_name()}' from the inventory.")
 
-def search_product(inventory):
+def search_product(inventory: Inventory) -> None:
     print("\nSearch Product")
     product_id = input("Enter Product ID: ").strip()
     product = inventory.find_product(product_id)
@@ -352,7 +418,7 @@ def search_product(inventory):
         print(f"    Shipping cost: ${product.calculate_shipping_cost():.2f}")
     print("-" * 48)
  
-def main():
+def main() -> None:
     print("=" * 40)
     print("INVENTORY MANAGEMENT SYSTEM")
     print("=" * 40)
