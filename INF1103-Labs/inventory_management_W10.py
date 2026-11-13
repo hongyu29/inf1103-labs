@@ -137,6 +137,11 @@ class Inventory:
                 return product
         return None
 
+    def get_products(self) -> list[Product]:
+        """A copy of the product list, so callers can loop over every Product
+        without being able to change the collection directly."""
+        return list(self.__products)
+
     def display_all(self) -> None:
         print("\nCurrent Inventory")
         print("-" * 48)
